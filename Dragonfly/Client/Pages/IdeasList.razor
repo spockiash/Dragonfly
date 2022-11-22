@@ -1,0 +1,109 @@
+﻿@page "/ideaslist"
+@using Dragonfly.Shared
+@using Dragonfly.Client.Pages.IdeaComponents
+@inject DialogService DialogService
+@inject HttpClient Http
+@implements IDisposable
+
+<h3>Ideas</h3>
+
+<div class="container ideas-container">
+    <div class="row buttons-row">
+        <RadzenButton Shade="Shade.Dark" ButtonStyle="ButtonStyle.Light" Text="Refresh grid" Click="@RefreshGrid" Style="width: 120px" />
+        <RadzenButton Shade="Shade.Dark" ButtonStyle="ButtonStyle.Warning" Text="Clear filters" Click="@CreateNewIdea" Style="width: 120px"/>
+        <RadzenButton Shade="Shade.Dark" ButtonStyle="ButtonStyle.Secondary" Text="Export" Click="@CreateNewIdea" Style="width: 120px"/>
+        <RadzenButton Shade="Shade.Dark" ButtonStyle="ButtonStyle.Info" Text="New Idea" Click="@CreateNewIdea" Style="width: 120px"/>
+    </div>
+
+    <div class="row grid-row">
+        @if (_ideas == null)
+        {
+            <div class="col-12">
+                <RadzenCard>
+                    <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Loading...</RadzenText>
+                    <RadzenProgressBar  ProgressBarStyle="ProgressBarStyle.Light" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                </RadzenCard>
+            </div>
+        }
+        else
+        {
+            <RadzenDataGrid RowClick="@RowClicked" AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="false" FilterMode="FilterMode.Advanced"
+                            AllowSorting="true" PageSize="15" AllowPaging="true" PagerHorizontalAlign="HorizontalAlign.Center" ShowPagingSummary="true"
+                            Data="@_ideas" TItem="IdeaModel" ColumnWidth="250px" LogicalFilterOperator="LogicalFilterOperator.Or">
+                <Columns>
+                    <RadzenDataGridColumn TItem="IdeaModel" Property="Id" Title="ID" Width="25px"/>
+                    <RadzenDataGridColumn TItem="IdeaModel" Property="Name" Title="Name" Width="200px" />
+                    <RadzenDataGridColumn TItem="IdeaModel" Property="Description" Title="Description" Width="300px" />
+                    <RadzenDataGridColumn TItem="IdeaModel" Property="Done" Title="Done" Width="40px" />
+                    <RadzenDataGridColumn TItem="IdeaModel" Property="Scrapped" Title="Scrapped" Width="40px" />
+                </Columns>
+            </RadzenDataGrid>
+        }
+    </div>
+</div>
+
+@code {
+    private IdeaModel[]? _ideas;
+    public bool IsDialogOpen { get; set; }
+
+    string text = "Hi";
+    int ideaId = 10248;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _ideas = await GetIdeas();
+    //await Http.PostAsJsonAsync("Ideas/PostShit", _ideas.First());
+    }
+
+
+    void Open(string title, Type type, Dictionary<string, object> parameters, DialogOptions options)
+    {
+        
+    }
+
+    void Close(dynamic result)
+    {
+        
+    }
+
+    private async Task RefreshGrid()
+    {
+        _ideas = await GetIdeas();
+        StateHasChanged();
+    }
+
+    private async Task<IdeaModel[]?> GetIdeas()
+    {
+        return await Http.GetFromJsonAsync<IdeaModel[]>("Ideas");
+    }
+
+    private async Task OpenIdea(int id)
+    {
+        await DialogService.OpenAsync<IdeaViewDialog>($"Idea {id}",
+    new Dictionary<string, object>() { { "IdeaId", id } },
+            new DialogOptions() { Width = "80%", Height = "60%", Resizable = false, Draggable = false });
+        IsDialogOpen = true;
+    }
+
+    private async Task CreateNewIdea()
+    {
+        await DialogService.OpenAsync<CreateNewDialog>($"Create New",
+            null,
+            new DialogOptions() { Width = "700px", Height = "512px", Resizable = false, Draggable = false });
+        IsDialogOpen = true;
+    }
+    
+    async Task RowClicked(DataGridRowMouseEventArgs<IdeaModel> args)
+    {
+        var id = args.Data.Id;
+        await OpenIdea(id);
+    }
+
+}
+
+@code {
+    public void Dispose()
+    {
+        DialogService?.Dispose();
+    }
+}

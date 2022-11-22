@@ -1,0 +1,126 @@
+﻿body {
+    main {
+        background: #f2f2f2;
+    }
+
+    .home-page {
+        .results-row {
+            .rz-datalist-content {
+                .rz-g {
+                    display: flex;
+                    flex-direction: column;
+                }
+            }
+        }
+    }
+
+    .search-button {
+        padding: 0px;
+        margin-left: 10px;
+        border-color: black;
+        border-style: solid;
+        border-color: #63737a;
+        border-width: 1px;
+        background-color: #28363c !important;
+    }
+
+    .home-page {
+        display: flex;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        justify-content: center;
+        align-items: stretch;
+
+        .row {
+            padding: 5px 0 5px 0;
+            margin: 5px 0 5px 0;
+        }
+    }
+
+    .sidebar {
+        .top-row {
+            background: rgba(28,32,37,1);
+        }
+
+        .nav-themed {
+            background: rgb(35,58,82);
+            background: linear-gradient(0deg, rgba(35,58,82,1) 0%, rgba(27,33,40,1) 28%, rgba(28,32,37,1) 100%);
+        }
+    }
+
+    #IdeaView {
+        .tags-row {
+            .tags-bar {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                margin-bottom: 15px;
+                span {
+                    margin: 0 2px 2px;
+                }
+            }
+        }
+    }
+
+
+    .rz-dialog-content {
+        height: 100%;
+
+        .dialog-window {
+
+
+            .alert-row {
+                padding: 0px 0px 0 13px !important;
+                margin: -35px 9px 0px -9px !important;
+            }
+
+            .idea-form {
+                padding: 0 5px 0 5px;
+                margin-right: 10px;
+
+                .form-input {
+                    margin: 0 0px 0 10px;
+                }
+            }
+
+            .tags-form {
+                padding: 0 5px 0 5px;
+                margin-right: 10px;
+            }
+
+            .control-row {
+                margin-top: 20px;
+                margin-bottom: 20px;
+            }
+
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: stretch;
+            height: 100%;
+        }
+    }
+
+
+    .ideas-container {
+        max-width: 100% !important;
+        width: 100% !important;
+
+        .grid-row {
+            .rz-data-grid {
+                margin: 0 0 0 0 !important;
+                padding: 0 0 0 0;
+            }
+        }
+
+        .buttons-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+
+            .rz-button {
+                margin: 0 3px 0 4px;
+            }
+        }
+    }
+}

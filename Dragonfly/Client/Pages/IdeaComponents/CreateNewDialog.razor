@@ -1,0 +1,199 @@
+﻿@page "/createnewdialog"
+
+@using Newtonsoft.Json;
+@using System.Text.RegularExpressions
+@using Dragonfly.Client.Helpers
+@using Microsoft.AspNetCore.Components
+@inject HttpClient Http
+
+@inject Radzen.DialogService dialogService
+@implements IDisposable
+<div class="container dialog-window">
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="row alert-row">
+            <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false" ShowIcon="false" Variant="Variant.Flat" Shade="Shade.Lighter">
+                @_errorMessage
+            </RadzenAlert>
+        </div>
+    }
+    <div class="row idea-form">
+        <RadzenText TextStyle="TextStyle.Subtitle1" class="--rz-success">Idea Name:</RadzenText>
+        <RadzenTextBox Class="w-100 form-input" @bind-Value="@_name"/>
+        <RadzenText TextStyle="TextStyle.Subtitle1" class="--rz-success">Description:</RadzenText>
+        <RadzenTextArea Rows="10" Class="w-100 form-input" @bind-Value="@_description"/>
+    </div>
+    <div class="row tags-form">
+        <RadzenText TextStyle="TextStyle.Subtitle1" class="--rz-success">Tags:</RadzenText>
+        @if (!_tagInsertMode)
+        {
+            <div class="col-11">
+                <RadzenDropDown Id="TagsSelector" Multiple="true" Chips="true" MaxSelectedLabels="20" AllowClear="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" Data="@_loadedTags" @bind-Value="@_multipleChoiceTags"
+                            TextProperty="TagName" ValueProperty="TagName" Change="@(args => CheckTagLimit())" Class="w-100" />
+            </div>
+            <div class="col-1">
+                <RadzenButton Shade="Shade.Dark" Click="@(args => InsertNewTag())" Disabled="@_disableAddTagButton" Text="Success" ButtonStyle="ButtonStyle.Success">
+                    <span class="oi oi-plus" aria-hidden="true"></span>
+                </RadzenButton>
+            </div>
+        }
+        else
+        {
+            <div class="col-12 tag-insert">
+                <RadzenTextBox @bind-Value="_newTag" Placeholder="Add new tag..." @onkeyup="EnterNewTag" Class="w-100" />
+            </div>
+        }
+    </div>
+    
+    <div class="row control-row">
+        <div class="col-md-12 text-end">
+            <RadzenButton Click="@((args) => dialogService.Close(false))" Shade="Shade.Dark" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Text="Cancel" Style="width: 120px" Class="me-1"/>
+            <RadzenButton Click="@((args) => Submit(true))" Shade="Shade.Dark" ButtonStyle="ButtonStyle.Info" Variant="Variant.Flat" Text="Save" Style="width: 120px"/>
+
+        </div>
+    </div>
+</div>
+
+
+@code {
+    private bool _disableAddTagButton;
+    private bool _tagInsertMode;
+    private string _name = string.Empty;
+    private string _description = string.Empty;
+    private string _newTag = string.Empty;
+    private string _errorMessage = string.Empty;
+
+    private const int MaxTags = 20;
+
+    private List<IdeaTagModel> _loadedTags = new();
+    private List<string> _multipleChoiceTags = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTags();
+    }
+
+
+    public async Task Submit(bool close)
+    {
+        if (String.IsNullOrEmpty(_name) && String.IsNullOrEmpty(_name))
+        {
+            _errorMessage = "Missing name and/or description. Cannot process request...";
+            return;
+        }
+        _errorMessage = string.Empty;
+        var formData = new IdeaModel()
+        {
+            Name = _name,
+            Description = _description,
+            Tags = GetTagsForSubmit(),
+            CreatedDate = DateTime.Now
+        };
+
+        await Http.PutAsJsonAsync("Ideas", formData);
+        dialogService.Close(close);
+    }
+
+    public async Task LoadTags()
+    {
+        var result = await Http.GetAsync($"Tags");
+        try
+        {
+            result.EnsureSuccessStatusCode();
+            var responseContent = await result.Content.ReadAsStringAsync();
+            if (!string.IsNullOrEmpty(responseContent))
+            {
+                var loadedTags = JsonConvert.DeserializeObject<IEnumerable<IdeaTagModel>>(responseContent);
+
+                if (loadedTags != null)
+                {
+                    _loadedTags = loadedTags.ToList();
+                }
+            }
+            _errorMessage = string.Empty;
+            StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            _errorMessage = "something went wrong...";
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public Task EnterNewTag(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            if (_multipleChoiceTags.Count() > MaxTags)
+            {
+                return Task.CompletedTask;
+            }
+            NewTag(_newTag);
+            _newTag = string.Empty;
+            _tagInsertMode = false;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task InsertNewTag()
+    {
+        _tagInsertMode = true;
+        return Task.CompletedTask;
+    }
+
+    public Task NewTag(string tag)
+    {
+        if (string.IsNullOrEmpty(tag)) return Task.CompletedTask;
+        tag = tag.ToLower();
+        var sanitized = Regex.Replace(tag, "[^a-zA-Z0-9% ._]", string.Empty).Split(' ');
+        var newTagName = TagHelper.GetTagName(sanitized);
+        var isNew = CheckIfTagNew(newTagName);
+        if (isNew)
+        {
+            _multipleChoiceTags.Add(newTagName);
+            _loadedTags.Add(new IdeaTagModel(){TagName = newTagName});
+        }
+        else
+        {
+            _errorMessage = "This tag already exists";
+        }
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public bool CheckIfTagNew(string newTag)
+    {
+        var duplicate = _loadedTags.FirstOrDefault(l => l.TagName == newTag);
+        return duplicate == null;
+    }
+
+    public void CheckTagLimit()
+    {
+        if (_errorMessage.Equals("This tag already exists"))
+        {
+            _errorMessage = string.Empty;
+        }
+        switch (_multipleChoiceTags.Count())
+        {
+            case > 20 when _disableAddTagButton == false:
+                _disableAddTagButton = true;
+                break;
+            case <= 20 when _disableAddTagButton:
+                _disableAddTagButton = false;
+                break;
+        }
+    }
+
+    public List<IdeaTagModel> GetTagsForSubmit()
+    {
+        return _loadedTags.Where(l => l.TagName != null && _multipleChoiceTags.Contains(l.TagName)).ToList();
+    }
+
+    public void Dispose()
+    {
+        dialogService?.Dispose();
+    }
+
+}

@@ -1,0 +1,121 @@
+﻿@page "/ideaviewdialog/{IdeaId}"
+
+@inject Radzen.DialogService dialogService
+@inject HttpClient Http
+@implements IDisposable
+<div class="container dialog-window" id="IdeaView">
+    
+    @if (Idea != null)
+    {
+        <div class="row">
+            <RadzenText TextStyle="TextStyle.Subtitle1" class="--rz-success">Status: @GetStatus()</RadzenText>
+            <RadzenText TextStyle="TextStyle.Subtitle1" class="--rz-success">@Idea.Name</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" class="--rz-success">@Idea.Description</RadzenText>
+        </div>
+    }
+
+    <div class="row">
+        @if (Idea?.Tags != null)
+        {
+            <div class="tags-row">
+                <RadzenText TextStyle="TextStyle.Subtitle1" class="--rz-success">Tags:</RadzenText>
+                <div class="tags-bar">
+                    @foreach (var tag in Idea.Tags)
+                    {
+                        <RadzenBadge BadgeStyle="BadgeStyle.Light" Text="@tag.TagName"/>
+                    }
+                </div>
+                    
+            </div>
+        }
+        <div class="col-md-12 text-end">
+            @if (Idea != null)
+            {
+                <RadzenButton Click="@((args) => SetDone())" Shade="Shade.Dark" Disabled="@DisableStatusButtons()" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Text="Done" Style="width: 120px" Class="me-1"/>
+                <RadzenButton Click="@((args) => SetAsScrapped())" Shade="Shade.Dark" Disabled="@DisableStatusButtons()" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Text="Scrap" Style="width: 120px" Class="me-1"/>
+
+            }
+            <RadzenButton Click="@((args) => dialogService.Close(true))" Shade="Shade.Dark" ButtonStyle="ButtonStyle.Info" Variant="Variant.Flat" Text="OK" Style="width: 120px"/>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int IdeaId { get; set; }
+
+    public IdeaModel? Idea { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        Idea = await Http.GetFromJsonAsync<IdeaModel?>($"Ideas/{IdeaId}");
+        StateHasChanged();
+    }
+
+    private async Task SetAsScrapped()
+    {
+        if (Idea != null)
+        {
+            Idea.Scrapped = true;
+            Idea.SetScrappedDate = DateTime.Now;
+        }
+        StateHasChanged();
+    }
+
+    private async Task SetDone()
+    {
+        if (Idea != null)
+        {
+            Idea.Done = true;
+            Idea.SetDoneDate = DateTime.Now;
+
+            await UpdateData();
+        } 
+            
+        StateHasChanged();
+    }
+
+    private string GetStatus()
+    {
+        if (Idea != null)
+        {
+            if (Idea.Done)
+            {
+                return "Done";
+            }
+            if (Idea.Scrapped)
+            {
+                return "Scrapped";
+            }
+            return "Just an idea";
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
+
+    private bool DisableStatusButtons()
+    {
+        if (Idea != null)
+        {
+            var done = Idea.Done;
+            var scrapped = Idea.Scrapped;
+            return done | scrapped;
+        }
+
+        return false;
+    }
+
+    async Task UpdateData()
+    {
+        await Http.PutAsJsonAsync("Ideas/PutUpdate", Idea);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        dialogService?.Dispose();
+    }
+
+}

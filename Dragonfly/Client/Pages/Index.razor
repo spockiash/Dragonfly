@@ -1,0 +1,107 @@
+﻿@page "/"
+@inject HttpClient Http
+@inject DialogService DialogService
+@using Newtonsoft.Json
+@using JsonSerializer = System.Text.Json.JsonSerializer
+@using Dragonfly.Client.Pages.IdeaComponents
+<div class="container home-page">
+    <div class="row search-row">
+        <div class="col-12">
+            <RadzenCard class="d-inline-flex w-100">
+                <RadzenTextBox Placeholder="Search..." Class="w-100" @bind-Value="@_searchQuery" />
+                <RadzenButton Click="@((args) => Search())" class="search-button" Shade="Shade.Darker" Variant="Variant.Text" ButtonStyle="ButtonStyle.Secondary">
+                    <span class="oi oi-magnifying-glass" aria-hidden="true"></span>
+                </RadzenButton>
+            </RadzenCard>
+        </div>
+    </div>
+    <div class="row alert-row">
+        <div class="col-12">
+            @if (_initSearch && _searchInProgress == false && SearchResult.Count() == 0)
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="false" Variant="Variant.Flat" Shade="Shade.Dark">
+                    No corresponding string was found
+                </RadzenAlert>
+            }
+        </div>
+    </div>
+    <div class="row results-row">
+        <div class="col-12">
+            @if(_searchInProgress)
+            {
+                <RadzenCard>
+                    <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Searching...</RadzenText>
+                    <RadzenProgressBar ProgressBarStyle="ProgressBarStyle.Light" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate"/>
+                </RadzenCard>
+            }
+            @if(_searchInProgress == false && SearchResult != null)
+            {
+                <RadzenDataList WrapItems="true" AllowPaging="true" PageSize="5" Data="@SearchResult" TItem="IdeaModel">
+                    <Template Context="idea">
+                        <a href="#" @onclick="() => OpenIdea(idea.Id)"><h5>@GetHeading(idea)</h5></a>
+                        <p>
+                            @idea.Description
+                        </p>
+
+                    </Template>
+                </RadzenDataList>
+            }
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private string _searchQuery = string.Empty;
+    public IEnumerable<IdeaModel>? SearchResult { get; set; }
+    private bool _searchInProgress;
+    private bool _initSearch = false;
+
+    public string GetHeading(IdeaModel idea) =>
+        $"{idea.Id} {idea.Name} - {GetIdeaStatus(idea)}";
+
+    private async Task OpenIdea(int id)
+    {
+        await DialogService.OpenAsync<IdeaViewDialog>($"Idea {id}",
+            new Dictionary<string, object>() { { "IdeaId", id } },
+            new DialogOptions() { Width = "80%", Height = "60%", Resizable = false, Draggable = false });
+    }
+
+    public string GetIdeaStatus(IdeaModel idea)
+    {
+        if (idea.Done && !idea.Scrapped)
+        {
+            return "Status: Done";
+        }
+        if (idea.Scrapped && !idea.Done)
+        {
+            return "Status: Scrapped";
+        }
+        return "Status: In progress";
+    }
+
+    public async Task Search()
+    {
+        _initSearch = true;
+        _searchInProgress = true;
+        var result = await Http.GetAsync($"Ideas/{_searchQuery}");
+        try
+        {
+            result.EnsureSuccessStatusCode();
+            var responseContent = await result.Content.ReadAsStringAsync();
+            if (!string.IsNullOrEmpty(responseContent))
+            {
+                SearchResult = JsonConvert.DeserializeObject<IEnumerable<IdeaModel>>(responseContent);
+            }
+            _searchInProgress = false;
+            StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            _searchInProgress = false;
+            Console.WriteLine(e);
+            throw;
+        }
+        
+    }
+}
