@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/Dragonfly/Server/app_data.db-shm
+/Dragonfly/Server/app_data.db-wal
