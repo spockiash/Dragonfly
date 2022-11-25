@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /Dragonfly/Server/app_data.db-shm
 /Dragonfly/Server/app_data.db-wal
+/Dragonfly/Server/app_data.db

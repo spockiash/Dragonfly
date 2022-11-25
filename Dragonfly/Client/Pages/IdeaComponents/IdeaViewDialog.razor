@@ -58,6 +58,10 @@
         {
             Idea.Scrapped = true;
             Idea.SetScrappedDate = DateTime.Now;
+            var ideaToSave = Idea;
+            ideaToSave.Tags = null;
+
+            await UpdateData(ideaToSave);
         }
         StateHasChanged();
     }
@@ -68,8 +72,10 @@
         {
             Idea.Done = true;
             Idea.SetDoneDate = DateTime.Now;
+            var ideaToSave = Idea;
+            ideaToSave.Tags = null;
 
-            await UpdateData();
+            await UpdateData(ideaToSave);
         } 
             
         StateHasChanged();
@@ -105,6 +111,12 @@
         }
 
         return false;
+    }
+
+    async Task UpdateData(IdeaModel idea)
+    {
+        await Http.PutAsJsonAsync("Ideas/PutUpdate", idea);
+        StateHasChanged();
     }
 
     async Task UpdateData()
